@@ -55,6 +55,13 @@ setup('authenticate to OpenShift Cluster', async ({ page, baseURL }) => {
   await passwordInput.fill(process.env.CLUSTER_PASSWORD);
   await page.getByRole('button', { name: /Log in/i }).click();
 
+  // Dismiss the OCP guided tour dialog ("Welcome to the new OpenShift experience!")
+  // that appears after first login and blocks the navigation assertion below.
+  const skipTour = page.getByRole('button', { name: /Skip tour/i });
+  if (await skipTour.isVisible({ timeout: 8000 }).catch(() => false)) {
+    await skipTour.click();
+  }
+
   // Save the auth state
   await expect(page.getByRole('navigation').first()).toBeVisible({ timeout: 15000 });
   await expect(page).toHaveURL(/(console|k8s|overview|dashboards)/i, { timeout: 15000 });
