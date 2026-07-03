@@ -340,7 +340,9 @@ var _ = Describe("GitOps Operator Sequential E2E Tests", func() {
 			container := deploymentFixture.GetTemplateSpecContainerByName(argoCDAgentAgentName, *agentDeployment)
 			Expect(container).ToNot(BeNil())
 
-			if fixture.EnvCI() || fixture.EnvLocalRun() || fixture.EnvNonOLM() {
+			// Not EnvCI: the Konflux legs set CI but install the productized operator,
+			// whose agent image is the Red Hat one.
+			if fixture.EnvLocalRun() || fixture.EnvNonOLM() {
 				Expect(container.Image).To(Equal(common.ArgoCDAgentAgentDefaultImageName))
 			} else {
 				Expect(container.Image).To(HavePrefix("registry.redhat.io/openshift-gitops-1/argocd-agent-rhel9"))
