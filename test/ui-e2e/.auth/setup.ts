@@ -59,6 +59,13 @@ setup('authenticate to OpenShift Cluster', async ({ page, baseURL }) => {
   await passwordInput.fill(process.env.CLUSTER_PASSWORD);
   await page.getByRole('button', { name: /Log in/i }).click();
 
+  // Dismiss the OCP guided tour dialog ("Welcome to the new OpenShift experience!")
+  // that appears after first login and can block the networkidle wait below.
+  const skipTour = page.getByRole('button', { name: /Skip tour/i });
+  if (await skipTour.isVisible({ timeout: 8000 }).catch(() => false)) {
+    await skipTour.click();
+  }
+
   //save the auth state
   await page.waitForLoadState('networkidle');
   await page.context().storageState({ path: authFile });
