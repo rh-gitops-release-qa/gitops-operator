@@ -105,11 +105,12 @@ Ginkgo [labels](https://onsi.github.io/ginkgo/#spec-labels) are used to categori
 | Label | Meaning | When to use |
 |-------|---------|-------------|
 | `openshfit` | Test requires OpenShift-specific features (Routes, ConsoleLinks, OLM Subscriptions, SCCs, etc.) and cannot run on vanilla Kubernetes (KinD, EKS, GKE, AKS). | Add when the test depends on OpenShift APIs or resources not available on non-OCP clusters. |
-| `HA` | Test requires a cluster with at least 3 worker nodes for HA (High Availability) validation. | Add when the test creates HA Redis StatefulSets or validates pod anti-affinity across nodes. |
+| `HA` | Test requires a cluster with at least 3 worker nodes for HA (High Availability) validation. | Add when the test creates HA Redis StatefulSets or validates pod anti-affinity across nodes. Redis HA places each replica on a different node, so any test that waits for an HA instance to become available needs this label, including tests that call `nodeFixture.ExpectHasAtLeastXNodes`. |
 
 ### How labels are used in CI
 
 - **OpenShift CI**: Runs all tests (no label filter), so all labelled and unlabelled tests execute.
+- **Single-node OpenShift**: Exclude the tests that need several nodes with `make e2e-tests-ginkgo OCP_LABEL_FILTER='"!xks && !HA"'` (the inner quotes are needed, because the Makefile passes the value to the shell unquoted). Setting `SKIP_HA_TESTS=true` skips the same tests at run time, but only the label lets them be filtered out before the run.
 - **xKS/KinD CI** (`make e2e-xks-tests-sequential-ginkgo` / `make e2e-xks-tests-parallel-ginkgo`): Uses `--label-filter="!openshfit"` to exclude OpenShift-only tests. The `XKS_LABEL_FILTER` env var can further customize filtering (e.g., `XKS_LABEL_FILTER="!openshfit && !HA"`).
 
 ### How to apply a label

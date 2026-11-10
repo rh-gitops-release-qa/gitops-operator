@@ -49,7 +49,7 @@ var _ = Describe("GitOps Operator Parallel E2E Tests", func() {
 
 		})
 
-		It("verifies that HA pods have expected SSC", Label("openshift"), func() {
+		It("verifies that HA pods have expected SSC", Label("openshift", "HA"), func() {
 
 			fixture.EnsureRunningOnOpenShift() // SSC requires OpenShift
 

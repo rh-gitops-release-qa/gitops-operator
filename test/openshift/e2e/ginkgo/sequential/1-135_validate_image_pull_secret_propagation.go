@@ -312,7 +312,7 @@ var _ = Describe("GitOps Operator Sequential E2E Tests", func() {
 			expectSAPullSecret(agentSA, argocdNS.Name, "my-pull-secret", true)
 		})
 
-		It("sets imagePullSecrets on Redis HA ServiceAccount", func() {
+		It("sets imagePullSecrets on Redis HA ServiceAccount", Label("HA"), func() {
 
 			By("creating a labeled pull Secret in the operator namespace")
 			Expect(k8sClient.Create(ctx, newLabeledPullSecret("my-pull-secret", ns))).To(Succeed())

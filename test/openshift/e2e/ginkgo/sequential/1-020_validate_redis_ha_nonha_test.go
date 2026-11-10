@@ -68,7 +68,7 @@ var _ = Describe("GitOps Operator Sequential E2E Tests", func() {
 			}
 		})
 
-		It("validates Redis HA and Non-HA", func() {
+		It("validates Redis HA and Non-HA", Label("HA"), func() {
 
 			// This test enables HA, so it needs to be running on a cluster with at least 3 nodes
 			nodeFixture.ExpectHasAtLeastXNodes(3)
