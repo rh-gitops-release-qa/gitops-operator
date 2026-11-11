@@ -487,6 +487,8 @@ func SetEnvInOperatorSubscriptionOrDeployment(key string, value string) {
 
 		subscriptionFixture.SetEnv(sub, key, value)
 
+		waitForOperatorDeploymentEnv(k8sClient, sub.Namespace, key, value, true)
+
 		WaitForAllDeploymentsInTheNamespaceToBeReady(sub.Namespace, k8sClient)
 
 	} else {
@@ -495,6 +497,8 @@ func SetEnvInOperatorSubscriptionOrDeployment(key string, value string) {
 		Expect(k8sClient.Get(context.Background(), client.ObjectKeyFromObject(sub), sub)).To(Succeed())
 
 		subscriptionFixture.SetEnv(sub, key, value)
+
+		waitForOperatorDeploymentEnv(k8sClient, sub.Namespace, key, value, true)
 
 		WaitForAllDeploymentsInTheNamespaceToBeReady(sub.Namespace, k8sClient)
 
@@ -528,6 +532,8 @@ func RemoveEnvFromOperatorSubscriptionOrDeployment(key string) error {
 
 		subscriptionFixture.RemoveEnv(sub, key)
 
+		waitForOperatorDeploymentEnv(k8sClient, sub.Namespace, key, "", false)
+
 		WaitForAllDeploymentsInTheNamespaceToBeReady(sub.Namespace, k8sClient)
 
 	} else {
@@ -538,6 +544,8 @@ func RemoveEnvFromOperatorSubscriptionOrDeployment(key string) error {
 		}
 
 		subscriptionFixture.RemoveEnv(sub, key)
+
+		waitForOperatorDeploymentEnv(k8sClient, sub.Namespace, key, "", false)
 
 		WaitForAllDeploymentsInTheNamespaceToBeReady(sub.Namespace, k8sClient)
 
@@ -661,6 +669,45 @@ func waitForAllEnvVarsToBeRemovedFromDeployments(ns string, envVarKeys []string,
 
 	}, "3m", "1s").Should(BeTrue())
 
+}
+
+// waitForOperatorDeploymentEnv blocks until the operator Deployment in ns has been rolled out with the environment
+// variable 'key' set to 'value' (present == true), or without 'key' at all (present == false).
+//
+// OLM updates the operator Deployment some time after the Subscription changes. Until it does, the old pod is still
+// Ready, so WaitForAllDeploymentsInTheNamespaceToBeReady returns at once, and the test goes on to run against an
+// operator that does not have the new setting yet (seen in 1-105_validate_label_selector on OCP 4.18).
+func waitForOperatorDeploymentEnv(k8sClient client.Client, ns string, key string, value string, present bool) {
+
+	Eventually(func() bool {
+		var deplList appsv1.DeploymentList
+		if err := k8sClient.List(context.Background(), &deplList, client.InNamespace(ns)); err != nil {
+			GinkgoWriter.Println(err)
+			return false
+		}
+
+		found := false
+		for _, depl := range deplList.Items {
+
+			// The new pod must have replaced every old one, not just be running next to it
+			if depl.Generation != depl.Status.ObservedGeneration ||
+				depl.Status.UpdatedReplicas != depl.Status.Replicas ||
+				depl.Status.ReadyReplicas != depl.Status.Replicas {
+				return false
+			}
+
+			for _, container := range depl.Spec.Template.Spec.Containers {
+				for _, env := range container.Env {
+					if env.Name == key && (!present || env.Value == value) {
+						found = true
+					}
+				}
+			}
+		}
+
+		return found == present
+
+	}, "5m", "2s").Should(BeTrue(), "operator Deployment in namespace "+ns+" should be rolled out with environment variable "+key+" present="+fmt.Sprint(present))
 }
 
 func WaitForAllDeploymentsInTheNamespaceToBeReady(ns string, k8sClient client.Client) {
